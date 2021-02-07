@@ -1,5 +1,6 @@
 " Global state {{{
 
+let g:flog_head_offset = 0
 let g:flog_instance_counter = 0
 let g:flog_visited_commits = []
 
