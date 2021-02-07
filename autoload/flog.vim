@@ -1110,12 +1110,17 @@ fu! flog#stable_select(commit_list, current_commit) abort
   return pick
 endfunction
 
+fu! flog#get_parents(commit) abort
+  let l:rev_list = system("git rev-list --parents -n 1 " . a:commit)
+  let l:parents = split(l:rev_list)[1:]
+  return l:parents
+endfunction
+
 fu! flog#jump_up_N_parents(amount) abort
   let l:current_commit = flog#get_full_commit_hash()
   let c = 0
   while c < a:amount
-    let l:parent_commit = system("git rev-list --parents -n 1 " . l:current_commit)
-    let l:parents = split(l:parent_commit)[1:]
+    let l:parents = flog#get_parents(l:current_commit)
     if len(l:parents) == 0
       return
     endif
@@ -1174,6 +1179,52 @@ endfunction
 " For example, bind to ]h
 fu! flog#jump_to_next_head() abort
   call flog#jump_to_offset_head(-1)
+endfunction
+
+" }}}
+
+" Branch highlighting {{{
+
+fu! flog#get_commit_position(commit_hash) abort
+  let l:state = flog#get_state()
+  let l:commit = flog#find_predicate(l:state.commits, {item -> flog#starts_with(a:commit_hash, item.short_commit_hash)})
+  let l:index = index(l:state.commits, l:commit)
+  let l:index = min([max([l:index, 0]), len(l:state.commits) - 1])
+  let l:line = index(l:state.line_commits, l:state.commits[l:index]) + 1
+  return [[l:line, 1, 1]]
+endfunction
+
+fu! flog#highlight_single_commit(commit_hash) abort
+  let positions_list = flog#get_commit_position(a:commit_hash)
+  let index = matchaddpos("flogInCurrentBranch", l:positions_list)
+  call add(g:flog_highlighted_commits, {"index": l:index, "commit": a:commit_hash, "position": l:positions_list})
+endfunction
+
+fu! flog#any(haystack, predicate) abort
+  return flog#find_predicate(a:haystack, a:predicate) != v:null
+endfunction
+
+fu! flog#highlight_commit_and_ancestors(commit_hash) abort
+  if flog#any(g:flog_highlighted_commits, {item -> item.commit == a:commit_hash})
+    return
+  endif
+  call flog#highlight_single_commit(a:commit_hash)
+  let parents = flog#get_parents(a:commit_hash)
+  for parent in l:parents
+    call flog#highlight_commit_and_ancestors(l:parent)
+  endfor
+endfunction
+
+fu! flog#highlight_current_commit() abort
+  execute "highlight flogInCurrentBranch ctermbg=green guibg=green"
+  call flog#highlight_commit_and_ancestors(flog#get_full_commit_hash())
+endfunction
+
+fu! flog#remove_all_highlighting() abort
+  for highlighted_commit in g:flog_highlighted_commits
+    call matchdelete(l:highlighted_commit.index)
+  endfor
+  let g:flog_highlighted_commits = []
 endfunction
 
 " }}}
