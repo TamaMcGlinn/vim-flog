@@ -1110,12 +1110,17 @@ fu! flog#stable_select(commit_list, current_commit) abort
   return pick
 endfunction
 
+fu! flog#get_parents(commit) abort
+  let l:rev_list = system("git rev-list --parents -n 1 " . a:commit)
+  let l:parents = split(l:rev_list)[1:]
+  return l:parents
+endfunction
+
 fu! flog#jump_up_N_parents(amount) abort
   let l:current_commit = flog#get_full_commit_hash()
   let c = 0
   while c < a:amount
-    let l:parent_commit = system("git rev-list --parents -n 1 " . l:current_commit)
-    let l:parents = split(l:parent_commit)[1:]
+    let l:parents = flog#get_parents(l:current_commit)
     if len(l:parents) == 0
       return
     endif
@@ -1339,6 +1344,30 @@ function! flog#restore_graph_cursor(cursor) abort
   endfor
 endfunction
 
+" Make the current branch bold
+function! flog#set_included_commits_color() abort
+  let l:current_commit = flog#rev_parse('HEAD')
+  if l:current_commit == g:flog_included_commits['current_commit']
+    return
+  endif
+  for included_commit in g:flog_included_commits['matches']
+    call matchdelete(l:included_commit)
+  endfor
+  let g:flog_included_commits = {'current_commit': '', 'matches': []}
+  let l:linecnt = 0
+  while linecnt < line('$')
+    let l:linecnt += 1
+    let l:line = getline(l:linecnt)
+    let l:commit_hash = matchstr(l:line, "[[][0-9a-z]*")[1:]
+    call system("git merge-base --is-ancestor " . l:commit_hash . " HEAD")
+    if v:shell_error == 0
+      let l:index = matchadd('flogInCurrentBranch', '\%'.linecnt.'l.*')
+      call add(g:flog_included_commits['matches'], l:index)
+    endif
+  endwhile
+  let g:flog_included_commits['current_commit'] = l:current_commit
+endfunction
+
 function! flog#populate_graph_buffer() abort
   let l:state = flog#get_state()
 
@@ -1353,6 +1382,7 @@ function! flog#populate_graph_buffer() abort
   call flog#set_graph_buffer_commits(l:commits)
   call flog#set_graph_buffer_title()
   call flog#set_graph_buffer_color()
+  call flog#set_included_commits_color()
 
   let l:state.commits = l:commits
 

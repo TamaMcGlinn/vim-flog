@@ -38,6 +38,8 @@ highlight default link flogRefHead       Keyword
 highlight default link flogRefHeadArrow  flogRef
 highlight default link flogRefHeadBranch Special
 
+highlight flogInCurrentBranch gui=bold cterm=bold
+
 " }}}
 
 " Diff {{{
