@@ -123,7 +123,6 @@ syntax match flogGraphEdge0 /^[_/ ]\?[|/\\*]/ nextgroup=flogGraphEdge2,@flogDiff
 syntax cluster flogGraphEdge contains=flogGraphEdge0,flogGraphEdge1,flogGraphEdge2,flogGraphEdge3,flogGraphEdge4,flogGraphEdge5,flogGraphEdge6,flogGraphEdge7,flogGraphEdge8,flogGraphEdge9
 
 syntax match flogGraphCrossing /_\|\/\ze|/ contained containedin=@flogGraphEdge
-syntax match flogGraphCommit /\*/ contained containedin=@flogGraphEdge
 
 if &background ==# 'dark'
   highlight default flogGraphEdge1 ctermfg=magenta     guifg=green1
